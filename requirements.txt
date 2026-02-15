@@ -1,0 +1,6 @@
+uvicorn
+fastapi
+uvicorn[standard]
+gunicorn
+pydantic
+httpx
