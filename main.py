@@ -1,23 +1,34 @@
 import os
 from fastapi import FastAPI
+from pydantic import BaseModel, Field
 
 app = FastAPI()
 
+STATUS_ONLINE = "RON3IA ONLINE"
+
+
+class RunProductionRequest(BaseModel):
+    dominio: str | None = Field(default=None, description="Domínio alvo")
+    modulos: list[str] | None = Field(default=None, description="Módulos a executar")
+
+
+class RunProductionResponse(BaseModel):
+    status: str
+    dominio: str | None = None
+    modulos: list[str] | None = None
+
+
 @app.get("/")
 def health():
-    return {"status": "RON3IA ONLINE"}
+    return {"status": STATUS_ONLINE}
 
-@app.post("/run-production")
-async def run_production(data: dict):
-
-    dominio = data.get("dominio")
-    modulos = data.get("modulos")
-
-    return {
-        "status": "job accepted",
-        "dominio": dominio,
-        "modulos": modulos
-    }
+@app.post("/run-production", status_code=202, response_model=RunProductionResponse)
+async def run_production(data: RunProductionRequest) -> RunProductionResponse:
+    return RunProductionResponse(
+        status="job accepted",
+        dominio=data.dominio,
+        modulos=data.modulos,
+    )
 
 if __name__ == "__main__":
     import uvicorn
