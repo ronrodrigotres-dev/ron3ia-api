@@ -6,6 +6,6 @@ export async function analyzeWebsite(url: string) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ url }),
     });
-    if (!response.ok) throw new Error(`Error: ${response.statusText}`);
+    if (!response.ok) throw new Error(`Error de conexión: ${response.statusText}`);
     return response.json();
 }
