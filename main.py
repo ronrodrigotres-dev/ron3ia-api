@@ -1,25 +1,21 @@
-import os
-from fastapi import FastAPI
+﻿import grpc
+import google.auth
+from google.auth.transport.requests import Request
+from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import OTLPSpanExporter
 
-app = FastAPI()
+# Autenticación y corrección de credenciales gRPC
+credentials, project_id = google.auth.default()
+if not credentials.valid:
+    credentials.refresh(Request())
 
-@app.get("/")
-def health():
-    return {"status": "RON3IA ONLINE"}
+ssl_creds = grpc.ssl_channel_credentials()
+auth_creds = grpc.metadata_call_credentials(
+    lambda context, callback: callback([("authorization", f"Bearer {credentials.token}")], None)
+)
+combined_creds = grpc.composite_channel_credentials(ssl_creds, auth_creds)
 
-@app.post("/run-production")
-async def run_production(data: dict):
-
-    dominio = data.get("dominio")
-    modulos = data.get("modulos")
-
-    return {
-        "status": "job accepted",
-        "dominio": dominio,
-        "modulos": modulos
-    }
-
-if __name__ == "__main__":
-    import uvicorn
-    port = int(os.environ.get("PORT", 8080))
-    uvicorn.run(app, host="0.0.0.0", port=port)
+otlp_exporter = OTLPSpanExporter(
+    endpoint="telemetry.googleapis.com:443",
+    credentials=combined_creds
+)
+print("RON3IA Backend: Telemetría configurada correctamente.")
