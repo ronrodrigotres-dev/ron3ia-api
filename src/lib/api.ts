@@ -1,4 +1,4 @@
-﻿const API_BASE = import.meta.env.VITE_RON3IA_API_URL;
+const API_BASE = "https://ron3ia-api-819648047297.us-central1.run.app";
 
 export async function analyzeWebsite(url: string) {
     const response = await fetch(`${API_BASE}/analyze`, {
