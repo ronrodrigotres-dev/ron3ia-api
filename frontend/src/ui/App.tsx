@@ -1,10 +1,11 @@
 import React from 'react'
-import { BrowserRouter, Link, Route, Routes, useSearchParams } from 'react-router-dom'
+import { BrowserRouter, Link, Route, Routes, useParams, useSearchParams } from 'react-router-dom'
 import {
   createCheckoutSession,
   createRepairCheckoutSession,
   emitVerdict,
   getReport,
+  getReportStatus,
   type AnalyzeResult,
 } from '../lib/api'
 
@@ -173,8 +174,8 @@ function RepairPage() {
     setError(null)
     setCheckingOut(true)
     try {
-      const { url } = await createRepairCheckoutSession(report_id)
-      window.location.assign(url)
+      const { checkout_url } = await createRepairCheckoutSession(report_id)
+      window.location.href = checkout_url
     } catch (e: any) {
       setError(e?.message ?? 'No se pudo iniciar el checkout de reparación')
       setCheckingOut(false)
@@ -229,11 +230,114 @@ function RepairPage() {
   )
 }
 
+function ReportPage() {
+  const { report_id = '' } = useParams()
+  const rid = (report_id ?? '').trim()
+  const [loading, setLoading] = React.useState(false)
+  const [error, setError] = React.useState<string | null>(null)
+  const [status, setStatus] = React.useState<'locked' | 'unlocked' | string>('locked')
+  const [basic, setBasic] = React.useState<any | null>(null)
+  const [full, setFull] = React.useState<any | null>(null)
+  const [email, setEmail] = React.useState('')
+  const [checkingOut, setCheckingOut] = React.useState(false)
+
+  React.useEffect(() => {
+    if (!rid) return
+    setLoading(true)
+    setError(null)
+    getReportStatus(rid)
+      .then((r) => {
+        setStatus(r.status)
+        setBasic(r.basic)
+        setFull(r.full)
+      })
+      .catch((e: any) => setError(e?.message ?? 'No se pudo cargar el estado del reporte'))
+      .finally(() => setLoading(false))
+  }, [rid])
+
+  async function handleCheckout() {
+    if (!rid) return
+    setError(null)
+    setCheckingOut(true)
+    try {
+      const { checkout_url } = await createCheckoutSession(rid, email.trim())
+      window.location.href = checkout_url
+    } catch (e: any) {
+      setError(e?.message ?? 'No se pudo iniciar el checkout')
+      setCheckingOut(false)
+    }
+  }
+
+  return (
+    <div className="ron3ia-wrap">
+      <div className="ron3ia-header">
+        <div>
+          <h1 className="ron3ia-title">REPORTE — RON3IA</h1>
+          <p className="ron3ia-subtitle">Estado: {status}</p>
+        </div>
+        <div className="ron3ia-subtitle">
+          <Link className="link" to="/">
+            Volver
+          </Link>
+        </div>
+      </div>
+
+      <div className="panel">
+        {!rid && <div className="result">Falta report_id en la ruta.</div>}
+        {loading && <div className="result">Cargando…</div>}
+        {error && <div className="result">{error}</div>}
+
+        {rid && !loading && !error && status === 'locked' && (
+          <>
+            <div className="result">
+              <strong>Resumen básico (GRATIS)</strong>
+              {'\n'}
+              {basic ? JSON.stringify(basic, null, 2) : '(sin datos)'}
+              {'\n\n'}
+              <strong>Veredicto Premium</strong>
+              {'\n'}
+              Bloqueado 🔒 — Desbloquéalo para ver el informe completo.
+            </div>
+
+            <div className="row" style={{ marginTop: 12 }}>
+              <input
+                className="input"
+                placeholder="Email (para Stripe Checkout)"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+              />
+            </div>
+
+            <button className="glass-button" onClick={handleCheckout} disabled={checkingOut || !email.trim()}>
+              {checkingOut ? 'Abriendo checkout…' : 'ACCEDER AL VEREDICTO'}
+            </button>
+            <div className="premium-hint">El análisis ya está listo. Solo falta desbloquearlo.</div>
+          </>
+        )}
+
+        {rid && !loading && !error && status === 'unlocked' && (
+          <>
+            <div className="result">
+              <strong>Informe completo (Premium)</strong>
+              {'\n'}
+              {full ? JSON.stringify(full, null, 2) : '(sin datos)'}
+            </div>
+            <div className="premium-hint">
+              Puedes iniciar la reparación automática desde la sección Repair.
+            </div>
+          </>
+        )}
+      </div>
+    </div>
+  )
+}
+
 export default function App() {
   return (
     <BrowserRouter>
       <Routes>
         <Route path="/" element={<DiagnosticPage />} />
+        <Route path="/report/:report_id" element={<ReportPage />} />
         <Route path="/repair" element={<RepairPage />} />
       </Routes>
     </BrowserRouter>

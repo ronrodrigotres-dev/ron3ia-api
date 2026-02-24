@@ -45,7 +45,7 @@ export async function createRepairCheckoutSession(report_id: string) {
   })
   const data = await response.json().catch(() => null)
   if (!response.ok) throw new Error(data?.detail ?? `Repair checkout error: ${response.statusText}`)
-  return data as { ok: boolean; url: string }
+  return data as { checkout_url: string }
 }
 
 export async function getReport(report_id: string) {
@@ -64,5 +64,18 @@ export async function getReport(report_id: string) {
       repair_active: boolean
       full_report: any | null
     }
+  }
+}
+
+export async function getReportStatus(report_id: string) {
+  const response = await fetch(`${API_BASE}/report-status/${encodeURIComponent(report_id)}`)
+  const data = await response.json().catch(() => null)
+  if (!response.ok) throw new Error(data?.detail ?? `Report status error: ${response.statusText}`)
+  return data as {
+    ok: boolean
+    report_id: string
+    status: 'locked' | 'unlocked' | string
+    basic: any | null
+    full: any | null
   }
 }

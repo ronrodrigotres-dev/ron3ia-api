@@ -5,3 +5,4 @@ openai
 google-generativeai
 google-cloud-bigquery
 pydantic
+sendgrid
