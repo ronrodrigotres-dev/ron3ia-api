@@ -26,11 +26,11 @@ export async function emitVerdict(payload: AnalyzePayload) {
   return data as { ok: boolean; result: AnalyzeResult }
 }
 
-export async function createCheckoutSession(report_id: string) {
+export async function createCheckoutSession(report_id: string, email: string) {
   const response = await fetch(`${API_BASE}/create-checkout-session`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ report_id, email: 'placeholder@example.com' }),
+    body: JSON.stringify({ report_id, email }),
   })
   const data = await response.json().catch(() => null)
   if (!response.ok) throw new Error(data?.detail ?? `Checkout error: ${response.statusText}`)

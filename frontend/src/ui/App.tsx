@@ -56,7 +56,7 @@ function DiagnosticPage() {
     setError(null)
     setCheckingOut(true)
     try {
-      const { checkout_url } = await createCheckoutSession(result.report_id)
+      const { checkout_url } = await createCheckoutSession(result.report_id, email.trim())
       window.location.href = checkout_url
     } catch (e: any) {
       setError(e?.message ?? 'No se pudo iniciar el checkout')
