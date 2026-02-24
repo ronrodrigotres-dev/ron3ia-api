@@ -1,12 +1,17 @@
-uvicorn
+# --- Web Server & Framework ---
 fastapi
 uvicorn[standard]
 gunicorn
 pydantic
+python-multipart
+
+# --- HTTP Client & Integrations ---
 httpx
 stripe
+
+# --- Google Cloud & Observability ---
+google-auth
 opentelemetry-api
 opentelemetry-sdk
 opentelemetry-instrumentation-fastapi
 opentelemetry-exporter-gcp-trace
-google-auth
