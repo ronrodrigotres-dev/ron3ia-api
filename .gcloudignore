@@ -3,7 +3,6 @@ __pycache__/
 *.pyc
 .env*
 
-# Frontend / tooling not needed for API build
-src/
-vite.config.ts
+# Monorepo: avoid sending frontend to backend builds
+frontend/
 .github/
