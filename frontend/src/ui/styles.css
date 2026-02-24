@@ -99,6 +99,53 @@ body {
   box-shadow: none;
 }
 
+.btn--primary {
+  background: rgba(255, 255, 255, 0.12);
+  border-color: rgba(255, 255, 255, 0.24);
+}
+
+.link {
+  color: rgba(255, 255, 255, 0.8);
+  text-decoration: none;
+}
+.link:hover {
+  text-decoration: underline;
+}
+
+.modules {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.module {
+  border-radius: 999px;
+  border: 1px solid var(--stroke);
+  background: rgba(255, 255, 255, 0.05);
+  color: rgba(255, 255, 255, 0.9);
+  padding: 10px 14px;
+  cursor: pointer;
+  transition: transform 0.15s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+}
+.module:hover {
+  transform: translateY(-1px);
+  border-color: rgba(255, 255, 255, 0.24);
+  box-shadow: 0 12px 26px rgba(0, 0, 0, 0.25);
+}
+.module--active {
+  background: rgba(255, 255, 255, 0.12);
+  border-color: rgba(255, 255, 255, 0.32);
+  box-shadow: 0 0 0 4px rgba(255, 255, 255, 0.05);
+}
+
+.price {
+  display: flex;
+  align-items: center;
+  color: var(--muted);
+  font-size: 13px;
+  padding: 0 6px;
+}
+
 /* PREMIUM glass button */
 .glass-button {
   position: relative;

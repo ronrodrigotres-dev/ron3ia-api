@@ -11,6 +11,7 @@ stripe
 
 # --- Google Cloud & Observability ---
 google-auth
+google-cloud-firestore
 opentelemetry-api
 opentelemetry-sdk
 opentelemetry-instrumentation-fastapi
