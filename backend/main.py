@@ -20,6 +20,7 @@ from pydantic import BaseModel
 # -----------------------------
 
 SERVICE_NAME = os.getenv("K_SERVICE", "fastapi-service")
+IS_CLOUD_RUN = bool(os.getenv("K_SERVICE") or os.getenv("K_REVISION") or os.getenv("PORT"))
 
 STRIPE_API_KEY = os.getenv("STRIPE_API_KEY", "").strip()
 endpoint_secret = os.getenv("STRIPE_ENDPOINT_SECRET", "").strip()
@@ -148,6 +149,10 @@ def _get_firestore_store() -> Optional[ReportStore]:
 
         return FirestoreReportStore()
     except Exception as e:
+        if IS_CLOUD_RUN:
+            raise RuntimeError(
+                f"Firestore is required in Cloud Run. Startup error: {e}"
+            ) from e
         print(f"Firestore disabled (startup error): {e}")
         return None
 
@@ -270,10 +275,10 @@ async def stripe_webhook(
     if event_type == "checkout.session.completed":
         metadata = data_object.get("metadata") or {}
         report_id = (metadata.get("report_id") or "").strip()
-        flow = (metadata.get("flow") or "").strip()
+        payment_type = (metadata.get("type") or metadata.get("flow") or "").strip()
 
         if report_id:
-            if flow == "verdict":
+            if payment_type in {"verdict", "report"}:
                 STORE.update_report(
                     report_id,
                     {
@@ -310,7 +315,7 @@ async def stripe_webhook(
                 except Exception as e:
                     print(f"Email send failed: {e}")
 
-            elif flow == "repair":
+            elif payment_type == "repair":
                 STORE.update_report(
                     report_id,
                     {
@@ -438,7 +443,7 @@ async def create_checkout_session(
             line_items=line_items,
             success_url=success_url,
             cancel_url=cancel_url,
-            metadata={"report_id": body.report_id, "flow": "verdict"},
+            metadata={"report_id": body.report_id, "type": "verdict"},
         )
     except Exception as e:
         raise HTTPException(status_code=502, detail=f"Stripe error: {e}") from e
@@ -476,7 +481,7 @@ async def create_repair_checkout_session(
             line_items=[{"price": STRIPE_PRICE_REPAIR, "quantity": 1}],
             success_url=success_url,
             cancel_url=cancel_url,
-            metadata={"report_id": body.report_id, "flow": "repair"},
+            metadata={"report_id": body.report_id, "type": "repair"},
         )
     except Exception as e:
         raise HTTPException(status_code=502, detail=f"Stripe error: {e}") from e
