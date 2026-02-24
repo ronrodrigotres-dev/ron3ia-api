@@ -20,6 +20,9 @@ SERVICE_NAME = os.getenv("K_SERVICE", "fastapi-service")
 
 STRIPE_API_KEY = os.getenv("STRIPE_API_KEY", "").strip()
 endpoint_secret = os.getenv("STRIPE_ENDPOINT_SECRET", "").strip()
+STRIPE_PRICE_ID = os.getenv("STRIPE_PRICE_ID", "").strip()
+STRIPE_SUCCESS_URL = os.getenv("STRIPE_SUCCESS_URL", "").strip()
+STRIPE_CANCEL_URL = os.getenv("STRIPE_CANCEL_URL", "").strip()
 
 ALLOWED_ORIGINS = [
     origin.strip()
@@ -73,7 +76,8 @@ if STRIPE_API_KEY:
 
 
 class AnalyzeRequest(BaseModel):
-    text: str
+    text: Optional[str] = None
+    url: Optional[str] = None
 
 
 class AnalyzeResponse(BaseModel):
@@ -91,6 +95,15 @@ class RunProductionResponse(BaseModel):
     job: str
     status: str
     details: dict[str, Any] = {}
+
+class CreateCheckoutSessionRequest(BaseModel):
+    success_url: Optional[str] = None
+    cancel_url: Optional[str] = None
+
+
+class CreateCheckoutSessionResponse(BaseModel):
+    ok: bool
+    url: str
 
 
 # -----------------------------
@@ -143,7 +156,64 @@ async def root() -> dict[str, str]:
 
 @app.post("/analyze", response_model=AnalyzeResponse)
 async def analyze(body: AnalyzeRequest) -> AnalyzeResponse:
-    return AnalyzeResponse(ok=True, result={"length": len(body.text)})
+    subject = (body.text or body.url or "").strip()
+    if not subject:
+        raise HTTPException(status_code=422, detail="Debes enviar 'url' o 'text'.")
+
+    # Diagnóstico gratuito (básico) — deja tensión para el premium.
+    errors: list[str] = []
+    if body.url and not (body.url.startswith("http://") or body.url.startswith("https://")):
+        errors.append("La URL debe comenzar con http:// o https://")
+    if len(subject) < 8:
+        errors.append("El input es demasiado corto para un diagnóstico fiable.")
+
+    summary = "Análisis básico listo. El veredicto premium desbloquea el plan de acción completo."
+    return AnalyzeResponse(
+        ok=True,
+        result={
+            "summary": summary,
+            "errors_detected": errors,
+            "preview": {"length": len(subject)},
+        },
+    )
+
+
+@app.post("/create-checkout-session", response_model=CreateCheckoutSessionResponse)
+async def create_checkout_session(
+    request: Request,
+    body: CreateCheckoutSessionRequest,
+) -> CreateCheckoutSessionResponse:
+    if not STRIPE_API_KEY:
+        raise HTTPException(status_code=503, detail="STRIPE_API_KEY no configurado.")
+    if not STRIPE_PRICE_ID:
+        raise HTTPException(status_code=503, detail="STRIPE_PRICE_ID no configurado.")
+
+    origin = request.headers.get("origin") or ""
+    fallback_success = f"{origin}/?checkout=success" if origin else ""
+    fallback_cancel = f"{origin}/?checkout=cancel" if origin else ""
+
+    success_url = (body.success_url or STRIPE_SUCCESS_URL or fallback_success).strip()
+    cancel_url = (body.cancel_url or STRIPE_CANCEL_URL or fallback_cancel).strip()
+    if not success_url or not cancel_url:
+        raise HTTPException(
+            status_code=503,
+            detail="Faltan STRIPE_SUCCESS_URL/STRIPE_CANCEL_URL (o header Origin para fallback).",
+        )
+
+    try:
+        session = stripe.checkout.Session.create(
+            mode="payment",
+            line_items=[{"price": STRIPE_PRICE_ID, "quantity": 1}],
+            success_url=success_url,
+            cancel_url=cancel_url,
+        )
+    except Exception as e:
+        raise HTTPException(status_code=502, detail=f"Stripe error: {e}") from e
+
+    if not session.url:
+        raise HTTPException(status_code=502, detail="Stripe no devolvió session.url.")
+
+    return CreateCheckoutSessionResponse(ok=True, url=session.url)
 
 
 @app.post("/run-production", response_model=RunProductionResponse)
