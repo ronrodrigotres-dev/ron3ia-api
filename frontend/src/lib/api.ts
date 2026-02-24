@@ -30,11 +30,11 @@ export async function createCheckoutSession(report_id: string) {
   const response = await fetch(`${API_BASE}/create-checkout-session`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ report_id }),
+    body: JSON.stringify({ report_id, email: 'placeholder@example.com' }),
   })
   const data = await response.json().catch(() => null)
   if (!response.ok) throw new Error(data?.detail ?? `Checkout error: ${response.statusText}`)
-  return data as { ok: boolean; url: string }
+  return data as { checkout_url: string }
 }
 
 export async function createRepairCheckoutSession(report_id: string) {

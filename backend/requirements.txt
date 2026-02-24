@@ -1,18 +1,7 @@
-# --- Web Server & Framework ---
 fastapi
-uvicorn[standard]
-gunicorn
-pydantic
-python-multipart
-
-# --- HTTP Client & Integrations ---
-httpx
+uvicorn
 stripe
-
-# --- Google Cloud & Observability ---
-google-auth
-google-cloud-firestore
-opentelemetry-api
-opentelemetry-sdk
-opentelemetry-instrumentation-fastapi
-opentelemetry-exporter-gcp-trace
+openai
+google-generativeai
+google-cloud-bigquery
+pydantic
