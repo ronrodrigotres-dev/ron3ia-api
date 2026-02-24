@@ -1,4 +1,3 @@
-import json
 import os
 from typing import Any, Optional
 
@@ -30,10 +29,13 @@ ALLOWED_ORIGINS = [
 
 
 def _setup_tracing() -> None:
-    resource = Resource.create({"service.name": SERVICE_NAME})
-    provider = TracerProvider(resource=resource)
-    provider.add_span_processor(BatchSpanProcessor(CloudTraceSpanExporter()))
-    trace.set_tracer_provider(provider)
+    try:
+        resource = Resource.create({"service.name": SERVICE_NAME})
+        provider = TracerProvider(resource=resource)
+        provider.add_span_processor(BatchSpanProcessor(CloudTraceSpanExporter()))
+        trace.set_tracer_provider(provider)
+    except Exception as e:
+        print(f"Tracing disabled (startup error): {e}")
 
 
 _setup_tracing()
