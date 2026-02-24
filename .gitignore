@@ -7,6 +7,8 @@ __pycache__/
 # Virtual env
 venv/
 .env
+.env*
+.env#
 
 # OS
 .DS_Store
@@ -18,5 +20,3 @@ Thumbs.db
 # Build
 dist/
 build/
-.env
-.env

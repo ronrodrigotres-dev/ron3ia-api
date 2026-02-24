@@ -1,0 +1,9 @@
+.git
+__pycache__/
+*.pyc
+.env*
+
+# Frontend / tooling not needed for API build
+src/
+vite.config.ts
+.github/
