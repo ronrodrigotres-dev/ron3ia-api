@@ -7,7 +7,7 @@ from pathlib import Path
 
 import stripe
 from fastapi import FastAPI, HTTPException, Request, Response
-from pydantic import BaseModel, EmailStr, field_validator
+from pydantic import AliasChoices, BaseModel, EmailStr, Field, field_validator
 
 logger = logging.getLogger("uvicorn.error")
 
@@ -20,6 +20,8 @@ SUCCESS_URL = os.environ.get(
     "SUCCESS_URL", "https://ronrodrigo3.com/pago-exitoso?session_id={CHECKOUT_SESSION_ID}"
 )
 CANCEL_URL = os.environ.get("CANCEL_URL", "https://ronrodrigo3.com/pago-cancelado")
+DEFAULT_CHECKOUT_AMOUNT = int(os.environ.get("DEFAULT_CHECKOUT_AMOUNT", "9900"))
+DEFAULT_CHECKOUT_CURRENCY = os.environ.get("DEFAULT_CHECKOUT_CURRENCY", "clp").lower()
 
 DATA_FILE = Path(__file__).parent / "data" / "reports_status.json"
 
@@ -63,15 +65,16 @@ def _write_status(data: dict) -> None:
 
 class CheckoutRequest(BaseModel):
     email: EmailStr
-    reportId: str
-    amount: int
-    currency: str
+    report_id: str = Field(validation_alias=AliasChoices("reportId", "report_id"))
+    amount: int = DEFAULT_CHECKOUT_AMOUNT
+    currency: str = DEFAULT_CHECKOUT_CURRENCY
 
-    @field_validator("reportId")
+
+    @field_validator("report_id")
     @classmethod
     def report_id_not_empty(cls, value: str) -> str:
         if not value.strip():
-            raise ValueError("reportId must not be empty")
+            raise ValueError("report_id/reportId must not be empty")
         return value
 
     @field_validator("amount")
@@ -117,12 +120,12 @@ async def create_checkout_session(body: CheckoutRequest) -> dict[str, str]:
                     "price_data": {
                         "currency": body.currency,
                         "unit_amount": body.amount,
-                        "product_data": {"name": f"Reporte RON3IA — {body.reportId}"},
+                        "product_data": {"name": f"Reporte RON3IA — {body.report_id}"},
                     },
                     "quantity": 1,
                 }
             ],
-            metadata={"reportId": body.reportId},
+            metadata={"reportId": body.report_id},
             success_url=SUCCESS_URL,
             cancel_url=CANCEL_URL,
         )
@@ -130,7 +133,7 @@ async def create_checkout_session(body: CheckoutRequest) -> dict[str, str]:
         logger.error("Stripe error creating checkout session: %s", exc)
         raise HTTPException(status_code=502, detail="Error creating Stripe session") from exc
 
-    return {"url": session.url}
+    return {"url": session.url, "checkout_url": session.url}
 
 
 # ---------------------------------------------------------------------------
