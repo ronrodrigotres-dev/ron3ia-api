@@ -1,6 +1,2 @@
-uvicorn
-fastapi
-uvicorn[standard]
-gunicorn
-pydantic
-httpx
+-r backend/requirements.txt
+
