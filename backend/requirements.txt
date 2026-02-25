@@ -7,3 +7,7 @@ google-generativeai
 google-cloud-bigquery
 pydantic
 sendgrid
+pydantic[email]
+stripe
+reportlab
+requests

@@ -9,3 +9,8 @@ frontend/dist/
 # Monorepo: avoid sending frontend to backend builds (backend deploy uses --source ./backend)
 frontend/
 .github/
+frontend/node_modules/
+frontend/dist/
+**/__pycache__/
+**/*.pyc
+.env*
