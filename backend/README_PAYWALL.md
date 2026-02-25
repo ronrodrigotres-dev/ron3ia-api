@@ -77,6 +77,29 @@ listening for the `checkout.session.completed` event.
 
 ---
 
+
+## Verificación post deploy (evitar shim de raíz)
+
+Después de desplegar con `--source ./backend`, revisa logs y confirma:
+- no aparece `/workspace/main.py` en el traceback/startup,
+- el arranque muestra `file=.../backend/main.py`,
+- y Gunicorn/Uvicorn levanta `main:app` desde el source `backend/`.
+
+Ejemplo (PowerShell):
+```bat
+gcloud run services logs read ron3ia-api --region southamerica-west1 --limit 100
+```
+
+Si necesitas forzar el comando explícitamente:
+```bat
+gcloud run deploy ron3ia-api ^
+  --source .\backend ^
+  --region southamerica-west1 ^
+  --allow-unauthenticated ^
+  --command gunicorn ^
+  --args '["-k","uvicorn.workers.UvicornWorker","--bind",":8080","main:app"]'
+```
+
 ## Endpoints
 
 ### `POST /create-checkout-session`
