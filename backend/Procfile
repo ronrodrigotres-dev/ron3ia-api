@@ -1,2 +1,1 @@
-web: sh -c 'exec gunicorn -k uvicorn.workers.UvicornWorker --bind :${PORT:-8080} main:app'
-
+web: gunicorn --worker-class uvicorn.workers.UvicornWorker --bind :${PORT:-8080} main:app

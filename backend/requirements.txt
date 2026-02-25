@@ -2,12 +2,6 @@ fastapi
 uvicorn[standard]
 gunicorn
 stripe
-openai
-google-generativeai
-google-cloud-bigquery
-pydantic
-sendgrid
 pydantic[email]
-stripe
-reportlab
 requests
+reportlab
