@@ -56,14 +56,32 @@ Copy the `whsec_…` printed by the CLI and set it as `STRIPE_WEBHOOK_SECRET`.
 
 ---
 
-## Deploy to Cloud Run (Windows — command prompt)
+## Deploy to Cloud Run (Windows PowerShell — recommended)
+
+> ✅ Deploy from `./backend` and avoid `--command/--args` overrides.
+> This keeps Buildpacks on `backend/main.py` (`main:app`) and avoids loading root `main.py`.
+
+```powershell
+gcloud run deploy ron3ia-api `
+  --source .\backend `
+  --region southamerica-west1 `
+  --allow-unauthenticated `
+  --set-build-env-vars=GOOGLE_PYTHON_VERSION=3.12 `
+  --set-env-vars=APP_URL=https://ronrodrigo3.com,ENABLE_TELEMETRY=false `
+  --set-secrets=STRIPE_SECRET_KEY=STRIPE_SECRET_KEY:latest,STRIPE_WEBHOOK_SECRET=STRIPE_WEBHOOK_SECRET:latest,RESEND_API_KEY=RESEND_API_KEY:latest
+```
+
+PowerShell tip: the backtick (`` ` ``) must be the last character on each continued line.
+
+## Deploy to Cloud Run (Windows Command Prompt)
 
 ```bat
 gcloud run deploy ron3ia-api ^
   --source .\backend ^
   --region southamerica-west1 ^
   --allow-unauthenticated ^
-  --set-env-vars APP_URL=https://ronrodrigo3.com ^
+  --set-build-env-vars GOOGLE_PYTHON_VERSION=3.12 ^
+  --set-env-vars APP_URL=https://ronrodrigo3.com,ENABLE_TELEMETRY=false ^
   --set-secrets STRIPE_SECRET_KEY=STRIPE_SECRET_KEY:latest,STRIPE_WEBHOOK_SECRET=STRIPE_WEBHOOK_SECRET:latest,RESEND_API_KEY=RESEND_API_KEY:latest
 ```
 
@@ -90,14 +108,14 @@ Ejemplo (PowerShell):
 gcloud run services logs read ron3ia-api --region southamerica-west1 --limit 100
 ```
 
-Si necesitas forzar el comando explícitamente:
-```bat
-gcloud run deploy ron3ia-api ^
-  --source .\backend ^
-  --region southamerica-west1 ^
-  --allow-unauthenticated ^
-  --command gunicorn ^
-  --args '["-k","uvicorn.workers.UvicornWorker","--bind",":8080","main:app"]'
+Si quieres forzar comando/args (solo emergencia), en PowerShell usa una forma que no empiece con `-k`:
+```powershell
+gcloud run deploy ron3ia-api `
+  --source .\backend `
+  --region southamerica-west1 `
+  --allow-unauthenticated `
+  --command=gunicorn `
+  --args="--worker-class=uvicorn.workers.UvicornWorker,--bind=:8080,main:app"
 ```
 
 ## Endpoints
