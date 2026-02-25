@@ -46,6 +46,12 @@ ALLOWED_ORIGINS = [
 
 app = FastAPI(title=SERVICE_NAME)
 
+# Evidencia clara en logs de qué app levantó Cloud Run
+@app.on_event("startup")
+async def _log_startup() -> None:
+    has_checkout = any(getattr(r, "path", "") == "/create-checkout-session" for r in app.routes)
+    print(f"[startup] service={SERVICE_NAME} file={__file__} has_/create-checkout-session={has_checkout}")
+
 # -----------------------------
 # Middlewares
 # -----------------------------
