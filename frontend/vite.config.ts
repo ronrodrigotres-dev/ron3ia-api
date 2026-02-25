@@ -4,9 +4,8 @@ import react from '@vitejs/plugin-react'
 // https://vitejs.dev/config/
 export default defineConfig({
   plugins: [react()],
-  // Ajustamos la base para que los assets carguen en GitHub Pages
-  // Reemplaza 'nombre-de-tu-repo' con el nombre real de tu repositorio
-  base: process.env.NODE_ENV === 'production' ? '/ron3ia-api/' : '/',
+  // Use root by default; allow deploy-specific override via VITE_BASE_PATH.
+  base: process.env.VITE_BASE_PATH || '/',
   build: {
     outDir: 'dist',
     sourcemap: true
