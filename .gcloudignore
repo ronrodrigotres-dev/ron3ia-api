@@ -1,16 +1,16 @@
-.git
-__pycache__/
-*.pyc
-.env*
-node_modules/
-frontend/node_modules/
-frontend/dist/
-
-# Monorepo: avoid sending frontend to backend builds (backend deploy uses --source ./backend)
-frontend/
+# VCS and CI metadata
+.git/
 .github/
-frontend/node_modules/
-frontend/dist/
+
+# Frontend artifacts not needed for Cloud Run backend deploys
+frontend/
+node_modules/
+
+# Python cache and local environment files
 **/__pycache__/
 **/*.pyc
 .env*
+.venv/
+
+# Local build outputs
+frontend/dist/
