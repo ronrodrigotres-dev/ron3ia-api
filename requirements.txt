@@ -1,11 +1,2 @@
-uvicorn
-fastapi
-uvicorn[standard]
-gunicorn
-pydantic
-httpx
-opentelemetry-api
-opentelemetry-sdk
-opentelemetry-instrumentation-fastapi
-opentelemetry-exporter-gcp-trace
-google-auth
+-r backend/requirements.txt
+
