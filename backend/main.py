@@ -7,7 +7,7 @@ from pathlib import Path
 
 import stripe
 from fastapi import FastAPI, HTTPException, Request, Response
-from pydantic import AliasChoices, BaseModel, EmailStr, Field, field_validator
+from pydantic import BaseModel, EmailStr, validator
 
 logger = logging.getLogger("uvicorn.error")
 
@@ -65,31 +65,28 @@ def _write_status(data: dict) -> None:
 
 class CheckoutRequest(BaseModel):
     email: EmailStr
-    report_id: str = Field(validation_alias=AliasChoices("reportId", "report_id"))
+    report_id: str | None = None
+    reportId: str | None = None
     amount: int = DEFAULT_CHECKOUT_AMOUNT
     currency: str = DEFAULT_CHECKOUT_CURRENCY
 
-
-    @field_validator("report_id")
-    @classmethod
-    def report_id_not_empty(cls, value: str) -> str:
-        if not value.strip():
-            raise ValueError("report_id/reportId must not be empty")
-        return value
-
-    @field_validator("amount")
-    @classmethod
+    @validator("amount")
     def amount_positive(cls, value: int) -> int:
         if value <= 0:
             raise ValueError("amount must be > 0")
         return value
 
-    @field_validator("currency")
-    @classmethod
+    @validator("currency")
     def currency_clp(cls, value: str) -> str:
         if value.lower() != "clp":
             raise ValueError("currency must be 'clp'")
         return value.lower()
+
+    def normalized_report_id(self) -> str:
+        report_id = (self.report_id or self.reportId or "").strip()
+        if not report_id:
+            raise ValueError("report_id/reportId must not be empty")
+        return report_id
 
 
 @app.get("/")
@@ -112,6 +109,7 @@ async def create_checkout_session(body: CheckoutRequest) -> dict[str, str]:
         raise HTTPException(status_code=503, detail="STRIPE_SECRET_KEY no configurado")
 
     try:
+        report_id = body.normalized_report_id()
         session = stripe.checkout.Session.create(
             mode="payment",
             customer_email=body.email,
@@ -120,15 +118,17 @@ async def create_checkout_session(body: CheckoutRequest) -> dict[str, str]:
                     "price_data": {
                         "currency": body.currency,
                         "unit_amount": body.amount,
-                        "product_data": {"name": f"Reporte RON3IA — {body.report_id}"},
+                        "product_data": {"name": f"Reporte RON3IA — {report_id}"},
                     },
                     "quantity": 1,
                 }
             ],
-            metadata={"reportId": body.report_id},
+            metadata={"reportId": report_id},
             success_url=SUCCESS_URL,
             cancel_url=CANCEL_URL,
         )
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
     except stripe.error.StripeError as exc:
         logger.error("Stripe error creating checkout session: %s", exc)
         raise HTTPException(status_code=502, detail="Error creating Stripe session") from exc
