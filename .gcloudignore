@@ -1,4 +1,14 @@
 .git
+__pycache__/
+*.pyc
+.env*
+node_modules/
+frontend/node_modules/
+frontend/dist/
+
+# Monorepo: avoid sending frontend to backend builds (backend deploy uses --source ./backend)
+frontend/
+.github/
 frontend/node_modules/
 frontend/dist/
 **/__pycache__/
