@@ -1,142 +1,85 @@
-# RON3IA Paywall — Backend
+# RON3IA Paywall — Backend (Cloud Run en Windows)
 
-FastAPI backend for the end-to-end paywall flow:
-**Emitir veredicto → pagar → Stripe confirma → webhook → generar PDF → enviar email → marcar paid/sent**
+Este backend está diseñado para desplegarse **solo** desde `./backend`.
 
----
+## Por qué NO usar `--source .`
 
-## Env vars
+Desplegar desde la raíz puede hacer que Cloud Run tome un entrypoint incorrecto (`/workspace/main.py`) y mezcle dependencias raíz/backend. Para evitar errores por imports/entrypoints equivocados, el flujo oficial es:
 
-| Variable | Required | Description |
-|---|---|---|
-| `STRIPE_SECRET_KEY` | ✅ | Stripe secret key (`sk_live_…` or `sk_test_…`) |
-| `STRIPE_WEBHOOK_SECRET` | ✅ | Webhook signing secret from Stripe Dashboard / CLI |
-| `RESEND_API_KEY` | ✅ | API key from [resend.com](https://resend.com) |
-| `APP_URL` | ✅ | Base URL of the deployed app (e.g. `https://ronrodrigo3.com`) |
-| `FROM_EMAIL` | optional | Sender address (default: `RON3IA <noreply@ronrodrigo3.com>`) |
+- `gcloud run deploy ... --source .\backend`
+- ASGI único: `backend/main.py` con `main:app`
 
----
+## Dependencias y entrypoint de producción
 
-## Run locally
+- `backend/requirements.txt` incluye `gunicorn` + `uvicorn[standard]`.
+- `backend/Procfile` usa `gunicorn --worker-class uvicorn.workers.UvicornWorker --bind :${PORT:-8080} main:app`.
+- Cloud Run inyecta `PORT`; el bind queda en `8080` por defecto.
 
-```bash
-cd backend
-pip install -r requirements.txt
-
-export STRIPE_SECRET_KEY=sk_test_...
-export STRIPE_WEBHOOK_SECRET=whsec_...
-export RESEND_API_KEY=re_...
-
-uvicorn main:app --reload
-```
-
----
-
-## Listen for Stripe webhooks locally (Stripe CLI)
-
-```bash
-stripe listen --forward-to localhost:8000/stripe/webhook
-```
-
-Copy the `whsec_…` printed by the CLI and set it as `STRIPE_WEBHOOK_SECRET`.
-
----
-
-## Trigger a test payment
-
-1. Start the backend and Stripe CLI listener (see above).
-2. Run the test script:
-   ```bash
-   cd backend
-   python scripts/test_checkout_local.py
-   ```
-3. Open the printed Checkout URL in your browser and complete the payment with a [Stripe test card](https://stripe.com/docs/testing#cards) (e.g. `4242 4242 4242 4242`).
-4. The CLI will forward the `checkout.session.completed` event to your local webhook.
-5. Check `backend/data/reports_status.json` — the record should show `"paid": true, "sent": true`.
-
----
-
-## Deploy to Cloud Run (Windows PowerShell — recommended)
-
-> ✅ Deploy from `./backend` and avoid `--command/--args` overrides.
-> This keeps Buildpacks on `backend/main.py` (`main:app`) and avoids loading root `main.py`.
+## Deploy recomendado (PowerShell)
 
 ```powershell
 gcloud run deploy ron3ia-api `
   --source .\backend `
   --region southamerica-west1 `
   --allow-unauthenticated `
+  --port 8080 `
   --set-build-env-vars=GOOGLE_PYTHON_VERSION=3.12 `
-  --set-env-vars=APP_URL=https://ronrodrigo3.com,ENABLE_TELEMETRY=false `
-  --set-secrets=STRIPE_SECRET_KEY=STRIPE_SECRET_KEY:latest,STRIPE_WEBHOOK_SECRET=STRIPE_WEBHOOK_SECRET:latest,RESEND_API_KEY=RESEND_API_KEY:latest
+  --set-env-vars=ENABLE_TELEMETRY=false
 ```
 
-PowerShell tip: the backtick (`` ` ``) must be the last character on each continued line.
+> Tip PowerShell: el backtick (`` ` ``) debe ser el último carácter de cada línea (sin espacios después).
 
-## Deploy to Cloud Run (Windows Command Prompt)
+## Deploy equivalente (Windows CMD)
 
 ```bat
 gcloud run deploy ron3ia-api ^
   --source .\backend ^
   --region southamerica-west1 ^
   --allow-unauthenticated ^
+  --port 8080 ^
   --set-build-env-vars GOOGLE_PYTHON_VERSION=3.12 ^
-  --set-env-vars APP_URL=https://ronrodrigo3.com,ENABLE_TELEMETRY=false ^
-  --set-secrets STRIPE_SECRET_KEY=STRIPE_SECRET_KEY:latest,STRIPE_WEBHOOK_SECRET=STRIPE_WEBHOOK_SECRET:latest,RESEND_API_KEY=RESEND_API_KEY:latest
+  --set-env-vars ENABLE_TELEMETRY=false
 ```
 
-Production webhook URL:
-```
-https://ron3ia-api-819648047297.southamerica-west1.run.app/stripe/webhook
-```
+## Override de emergencia (PowerShell, sin romper parsing)
 
-Configure this URL in the Stripe Dashboard → Developers → Webhooks → Add endpoint,
-listening for the `checkout.session.completed` event.
+Si necesitas forzar comando/args:
 
----
-
-
-## Verificación post deploy (evitar shim de raíz)
-
-Después de desplegar con `--source ./backend`, revisa logs y confirma:
-- no aparece `/workspace/main.py` en el traceback/startup,
-- el arranque muestra `file=.../backend/main.py`,
-- y Gunicorn/Uvicorn levanta `main:app` desde el source `backend/`.
-
-Ejemplo (PowerShell):
-```bat
-gcloud run services logs read ron3ia-api --region southamerica-west1 --limit 100
-```
-
-Si quieres forzar comando/args (solo emergencia), en PowerShell usa una forma que no empiece con `-k`:
 ```powershell
 gcloud run deploy ron3ia-api `
   --source .\backend `
   --region southamerica-west1 `
   --allow-unauthenticated `
   --command=gunicorn `
-  --args="--worker-class=uvicorn.workers.UvicornWorker,--bind=:8080,main:app"
+  --args='["--worker-class=uvicorn.workers.UvicornWorker","--bind=:8080","main:app"]'
 ```
 
-## Endpoints
+## Verificación post-deploy
 
-### `POST /create-checkout-session`
+1. Revisar logs:
 
-```json
-{
-  "email": "cliente@dominio.com",
-  "reportId": "rep_xxx",
-  "amount": 9900,
-  "currency": "clp"
-}
+```powershell
+gcloud run services logs read ron3ia-api --region southamerica-west1 --limit 100
 ```
 
-Returns:
-```json
-{ "url": "https://checkout.stripe.com/..." }
+2. Confirmar OpenAPI:
+
+```powershell
+curl https://<SERVICE_URL>/openapi.json
 ```
 
-### `POST /stripe/webhook`
+Debe incluir rutas:
+- `/create-checkout-session`
+- `/stripe/webhook`
 
-Stripe webhook endpoint. Verifies signature, processes `checkout.session.completed`,
-generates the PDF, sends it via email, and persists state to `data/reports_status.json`.
+3. Healthcheck rápido:
+
+```powershell
+curl https://<SERVICE_URL>/health
+```
+
+## Endpoints esperados
+
+- `POST /create-checkout-session`
+- `POST /stripe/webhook`
+- `GET /openapi.json`

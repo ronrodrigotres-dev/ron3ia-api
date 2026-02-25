@@ -5,6 +5,7 @@
 # Frontend artifacts not needed for Cloud Run backend deploys
 frontend/
 node_modules/
+dist/
 
 # Python cache and local environment files
 **/__pycache__/
